@@ -1,0 +1,8 @@
+streamlit
+rdflib
+pyshacl
+openai
+requests
+azure-identity
+azure-storage-blob
+python-dotenv

@@ -1,0 +1,122 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ 
+# =====================================================================
+# SESSION RULES (Evaluated in real-time on the temporary graph per query)
+# =====================================================================
+ 
+# --- RULE 1a: Stop a single malicious query ---
+ex:MaliciousCheckShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf ex:securityStatus ;
+    sh:property [
+        sh:path ex:securityStatus ;
+        sh:not [
+            sh:hasValue "Malicious" ;
+        ] ;
+        sh:message "Query stopped: This query violates the company's core security policy." ;
+    ] .
+ 
+# --- RULE 2a: Total block of the session after 3 malicious queries ---
+ex:WholeChatBlockedShape
+    a sh:NodeShape ;
+    sh:targetClass ex:ChatSession ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "System stopped: You have asked too many queries that violate the company's core security policy." ;
+        sh:select '''
+            PREFIX ex: <http://example.org/>
+            SELECT ?this
+            WHERE {
+                ?this ex:containsQuery ?query .
+                ?query ex:securityStatus "Malicious" .
+            }
+            GROUP BY ?this
+            HAVING (COUNT(?query) >= 3)
+        ''' ;
+    ] .
+ 
+# --- RULE 3a: Safety net for confidential information ---
+ex:SafetyNetShape
+    a sh:NodeShape ;
+    sh:targetClass ex:Query ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "Query stopped: This query concerns confidential information that you do not have permission to access." ;
+        sh:select '''
+            PREFIX ex: <http://example.org/>
+            SELECT ?this
+            WHERE {
+                ?this ex:concernsConfLevel ex:CompanyConfidential .
+ 
+                ?session ex:containsQuery ?this .
+                ?session ex:startedBy ?user .
+                ?user ex:hasRole ?role .
+ 
+                FILTER NOT EXISTS { 
+                    ?role ex:hasAccessToLevel ex:CompanyConfidential .
+                }
+            }
+        ''' ;
+    ] .
+ 
+# --- RULE 4a: Guardrail protecting generated outputs ---
+ex:OutputGuardrailShape
+    a sh:NodeShape ;
+    sh:targetSubjectsOf ex:outputSecurityStatus ;
+    sh:property [
+        sh:path ex:outputSecurityStatus ;
+        sh:not [
+            sh:hasValue "Malicious" ;
+        ] ;
+        sh:message "Security Guardrail Triggered: The agent's generated answer was blocked because it contained sensitive corporate data." ;
+    ] .
+ 
+# =====================================================================
+# PERMANENT RULES (Evaluated long-term)
+# =====================================================================
+ 
+# --- RULE 1b: Create a "Red" flag for users with 3+ malicious sessions ---
+ex:PermanentBlockRuleShape
+    a sh:NodeShape ;
+    sh:targetClass ex:Employee, ex:Manager ;
+    sh:rule [
+        a sh:SPARQLRule ;
+        sh:construct '''
+            PREFIX ex: <http://example.org/>
+            CONSTRUCT {
+                $this ex:globalSecurityStatus "Red" .
+            }
+            WHERE {
+                FILTER($this != ex:u0000)
+                ?session ex:startedBy $this .
+                ?session ex:sessionStatus ?status .
+                FILTER(STR(?status) = "Malicious")
+            }
+            GROUP BY $this
+            HAVING (COUNT(?session) >= 3)
+        ''' ;
+    ] .
+ 
+# --- RULE 2b: Create a "Yellow" flag for users with 1-2 malicious sessions ---
+ex:WarningBlockRuleShape
+    a sh:NodeShape ;
+    sh:targetClass ex:Employee, ex:Manager ;
+    sh:rule [
+        a sh:SPARQLRule ;
+        sh:construct '''
+            PREFIX ex: <http://example.org/>
+            CONSTRUCT {
+                $this ex:globalSecurityStatus "Yellow" .
+            }
+            WHERE {
+                FILTER($this != ex:u0000)
+                ?session ex:startedBy $this .
+                ?session ex:sessionStatus ?status .
+                FILTER(STR(?status) = "Malicious")
+            }
+            GROUP BY $this
+            HAVING (COUNT(?session) >= 1 && COUNT(?session) < 3)
+        ''' ;
+    ] .

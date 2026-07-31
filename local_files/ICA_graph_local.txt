@@ -1,0 +1,35 @@
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+ 
+ex:u1001 a ex:Employee ;
+    ex:belongsToDepartment "Finance" ;
+    ex:hasRole ex:Employee .
+ 
+ex:u1002 a ex:Employee ;
+    ex:belongsToDepartment "IT-Support" ;
+    ex:hasRole ex:Employee .
+ 
+ex:u1003 a ex:Employee ;
+    ex:belongsToDepartment "HR" ;
+    ex:hasRole ex:Employee .
+ 
+ex:u2001 a ex:Employee ;
+    ex:belongsToDepartment "Finance" ;
+    ex:hasRole ex:Manager .
+ 
+ex:u2002 a ex:Employee ;
+    ex:belongsToDepartment "IT-Support" ;
+    ex:hasRole ex:Manager .
+ 
+ex:u0000 a ex:Admin,
+        ex:Employee ;
+    ex:belongsToDepartment "IT-Security" ;
+    ex:hasRole ex:Administrator .
+ 
+ex:Manager ex:hasAccessToLevel ex:CompanyConfidential,
+        ex:CompanyRestricted .
+ 
+ex:Administrator ex:hasAccessToLevel ex:CompanyConfidential,
+        ex:CompanyRestricted .
+ 
+ex:Employee ex:hasAccessToLevel ex:CompanyRestricted .
